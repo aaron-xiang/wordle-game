@@ -1,23 +1,92 @@
-import logo from './logo.svg';
 import './App.css';
+import Board from './components/Board'
+import Keyboard from './components/Keyboard'
+import GameOver from './components/GameOver'
+import { createContext, useState } from 'react'
+import { boardDefault, generateWordSet } from './Words'
+import { useEffect } from 'react';
+
+export const AppContext = createContext()
 
 function App() {
+  const [board, setBoard] = useState(boardDefault)
+  const [currAttempt, setCurrAttempt] = useState({attempt: 0, letterPos: 0})
+  const [wordSet, setWordSet] = useState(new Set())
+  const [disabledLetters, setDisabledLetters] = useState([])
+  const [gameOver, setGameOver] = useState({gameOver: false, gussedWord: false})
+  const [correctWord, setCorrectWord] = useState("")
+
+  useEffect(() => {
+    generateWordSet().then((words) => {
+      setWordSet(words.wordSet)
+      setCorrectWord(words.todaysWord)
+    })
+  }, [])
+
+  const onSelectLetter = (keyVal) => {
+    if (currAttempt.letterPos > 4) return
+    const newBoard = [...board]
+    newBoard[currAttempt.attempt][currAttempt.letterPos] = keyVal
+    setBoard(newBoard)
+    setCurrAttempt({...currAttempt, letterPos: currAttempt.letterPos + 1})
+  }
+
+  const onDelete = () => {
+    if (currAttempt.letterPos === 0) return
+    const newBoard = [...board]
+    newBoard[currAttempt.attempt][currAttempt.letterPos - 1] = ""
+    setBoard(newBoard)
+    setCurrAttempt({...currAttempt, letterPos: currAttempt.letterPos - 1})
+  }
+
+  const onEnter = () => {
+    console.log(correctWord) // remove this
+    if (currAttempt.letterPos !== 5) return
+    let currWord = ""
+    for (let i = 0; i < 5; i++) {
+      currWord += board[currAttempt.attempt][i]
+    }
+    if (wordSet.has(currWord.toLowerCase())) {
+      setCurrAttempt({attempt: currAttempt.attempt + 1, letterPos: 0})
+    }
+    else {
+      alert("Not a valid word")
+    }
+    if (currWord === correctWord) {
+      console.log("correct") // remove this 
+      setGameOver({gameOver: true, gussedWord: true})
+      return;
+    }
+    if (currAttempt.attempt === 5 && wordSet.has(currWord.toLowerCase()) && currWord !== correctWord) {
+      setGameOver({gameOver: true, gussedWord: false})
+    }
+  }
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <nav>
+        <h1>Wordle</h1>
+      </nav>
+      <AppContext.Provider 
+        value={
+          {board, 
+          setBoard, 
+          currAttempt, 
+          setCurrAttempt, 
+          onSelectLetter, 
+          onDelete, 
+          onEnter,
+          correctWord,
+          disabledLetters,
+          setDisabledLetters,
+          gameOver,
+          setGameOver}
+        }>
+        <div className='game'>
+          <Board />
+          {gameOver.gameOver ? <GameOver /> : <Keyboard />}
+        </div>
+      </AppContext.Provider>
     </div>
   );
 }
